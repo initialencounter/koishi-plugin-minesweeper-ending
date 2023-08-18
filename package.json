@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-minesweeper-ending",
-  "description": "j扫雷残局",
-  "version": "0.0.1",
+  "description": "扫雷残局, 解谜|烧脑|竞速",
+  "version": "1.0.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -9,6 +9,19 @@
     "dist"
   ],
   "license": "MIT",
+  "author": {
+    "name": "initencounter",
+    "email": "2911583893@qq.com",
+    "url": "https://github.com/initialencounter"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/initialencounter/koishi-plugin-minesweeper-ending.git"
+  },
+  "bugs": {
+    "url": "https://github.com/initialencounter/koishi-plugin-minesweeper-ending/issues"
+  },
+  "homepage": "https://github.com/initialencounter/koishi-plugin-minesweeper-ending#readme",
   "scripts": {},
   "keywords": [
     "chatbot",
@@ -16,6 +29,14 @@
     "plugin"
   ],
   "peerDependencies": {
-    "koishi": "^4.14.1"
-  }
+    "koishi": "^4.13.0"
+  },
+  "koishi": {
+    "service": {
+      "optional": [
+        "puppeteer"
+      ]
+    }
+  },
+  "$schema": "../../package.schema.json"
 }

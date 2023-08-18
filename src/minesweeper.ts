@@ -25,9 +25,11 @@ export default class Minefield
    height: number
    cells: any
    mines: any
+   start_time: number 
 
    constructor(width, height, mines = Math.floor(width*height/5), randomizer = Math.random)
-   {
+   {  
+      this.start_time = Date.now()
       let getNearbyCellsTemp = (cell) =>
       {
          let nearbyCells = [cell];                                  //center
