@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-minesweeper-ending",
   "description": "扫雷残局, 解谜|烧脑|竞速",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -22,14 +22,20 @@
     "url": "https://github.com/initialencounter/koishi-plugin-minesweeper-ending/issues"
   },
   "homepage": "https://github.com/initialencounter/koishi-plugin-minesweeper-ending#readme",
-  "scripts": {},
+  "scripts": {
+    "postinstall": "node lib/downloadtheme.js"
+  },
   "keywords": [
     "chatbot",
     "koishi",
     "plugin"
   ],
   "peerDependencies": {
+    "@koishijs/plugin-adapter-onebot": "^5.7.3",
     "koishi": "^4.13.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10"
   },
   "koishi": {
     "service": {
@@ -38,5 +44,8 @@
       ]
     }
   },
-  "$schema": "../../package.schema.json"
+  "$schema": "../../package.schema.json",
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.0"
+  }
 }
