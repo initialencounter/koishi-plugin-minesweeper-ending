@@ -2,7 +2,6 @@ import { Context, Schema, Logger, Dict, Session } from 'koishi'
 import { } from '@koishijs/plugin-adapter-onebot'
 import Minefield from "./minesweeper";
 import { resolve } from 'path';
-import { existsSync } from 'fs';
 export const name = 'minesweeper-ending'
 const logger = new Logger(name)
 

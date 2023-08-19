@@ -1,15 +1,16 @@
-import { createWriteStream, existsSync} from 'fs'
+import { createWriteStream, existsSync } from 'fs'
 import axios from 'axios'
 import AdmZip from 'adm-zip'
 import { mkdir } from 'fs/promises'
-import { Logger, Context } from "koishi"
+import { Logger } from "koishi"
 import { resolve } from "path"
-const ctx = new Context()
+
 const logger = new Logger("minesweeper-ending")
-const binary = resolve(ctx.baseDir, "data/minesweeper/theme/chocolate/type0.png")
+const binary = resolve("../../data/minesweeper/theme/chocolate/type0.png")
 if (!existsSync(binary)) {
-    downloadRelease(resolve(ctx.baseDir, "data/minesweeper"))
+    downloadRelease(resolve("../../data/minesweeper"))
 }
+
 async function downloadRelease(themePath) {
     const filename = `theme.zip`
     const url = "https://gitee.com/initencunter/koishi-plugin-minesweeper-ending/releases/download/v1.1.0/theme.zip"

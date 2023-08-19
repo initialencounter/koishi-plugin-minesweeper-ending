@@ -1,12 +1,12 @@
 {
   "name": "koishi-plugin-minesweeper-ending",
   "description": "扫雷残局, 解谜|烧脑|竞速",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
     "lib",
-    "dist"
+    "install.js"
   ],
   "license": "MIT",
   "author": {
