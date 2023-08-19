@@ -1,4 +1,4 @@
-import { Context, Schema, Logger, Dict, Session } from 'koishi'
+import { Context, Schema, Logger, Dict, Session, h } from 'koishi'
 import { } from '@koishijs/plugin-adapter-onebot'
 import Minefield from "./minesweeper";
 import { resolve } from 'path';
@@ -11,6 +11,8 @@ export interface MinesweeperRank {
   userName: string
   score: number
   isFlag: boolean
+  LastChallenge: number
+  ChallengeScore: number
 }
 // TypeScript 用户需要进行类型合并
 declare module 'koishi' {
@@ -22,7 +24,6 @@ declare module 'koishi' {
 class EndingGame {
   static using = ['puppeteer']
   minefieldDict: Dict
-  mineNum: number
   theme: string
   constructor(private ctx: Context, private config: EndingGame.Config) {
     this.theme = this.config.theme
@@ -33,13 +34,108 @@ class EndingGame {
       id: 'unsigned',
       userId: 'string',
       userName: 'string',
-      score: 'integer',
-      isFlag: 'boolean'
+      score: 'integer(10)',
+      isFlag: 'boolean',
+      LastChallenge: 'integer(16)',
+      ChallengeScore: "integer(10)"
     }, {
       // 使用自增的主键值
       autoInc: true,
     })
     this.minefieldDict = {}
+    ctx.command("fight")
+      .alias("挑战模式")
+      .action(async ({ session }) => {
+        let last = await ctx.model.get('minesweeper_ending_rank', { userId: session.userId })
+        const now = new Date().getDate()
+        if (last.length === 0) {
+          await ctx.model.create('minesweeper_ending_rank', { userId: session.userId, userName: session.username, LastChallenge: now })
+        } else {
+          if (last[0]?.LastChallenge) {
+            if (last[0]?.LastChallenge === now) {
+              return "今天已经挑战过了，明天再来吧"
+            } else {
+              await ctx.model.set('minesweeper_ending_rank', { userId: session.userId }, { LastChallenge: now })
+            }
+          } else {
+            await ctx.model.set('minesweeper_ending_rank', { userId: session.userId }, { LastChallenge: now })
+          }
+        }
+        session.send(h.at(session.userId) + "请准备! 3s 后开始挑战, 输入取消可以放弃挑战")
+        await this.sleep(3000)
+        const nowStamp = Date.now()
+        let m = new Minefield(this.config.widthC, this.config.heightC, this.config.minesC)
+        m = this.makePool(m)
+        session.send(this.renderX(m, session.userId))
+        const cell = await session.prompt(86400000)
+        if (!cell) {
+          return "挑战失败"
+        }
+        if (isNaN(Number(cell))) {
+          session.send(h.at(session.userId) + "输入不合法，你还有一次机会")
+          const cell = await session.prompt(86400000)
+          if (isNaN(Number(cell))) {
+            return "挑战失败"
+          }
+        }
+        m = await this.findNoGuess(m, cell)
+        m = this.makePool(m)
+        m["goingOn"] = true
+        while (m["goingOn"] == true) {
+          m = this.makePool(m)
+          session.send(this.renderX(m, session.userId))
+          var input = await session.prompt(86400000)
+          if (!input) {
+            return h.at(session.userId) + "输入超时, 挑战失败"
+          }
+          if (input.includes("放弃") || input.includes("取消")) {
+            m["goingOn"] = false
+          } else {
+            let s = input
+            if (s.startsWith('f')) {
+              s = s.slice(1,)
+              if (isNaN(Number(s))) {
+                session.send("输入序号不合法")
+              } else {
+                m = this.challengeFl(m, s, session as Session)
+              }
+            } else if (s.startsWith('s')) {
+              s = s.slice(1,)
+              if (isNaN(Number(s))) {
+                session.send("输入序号不合法")
+              } else {
+                m = this.challengeNf(m, s, session as Session)
+              }
+            } else {
+              if (isNaN(Number(s))) {
+                session.send("输入序号不合法")
+              } else {
+                const flag = await ctx.model.get('minesweeper_ending_rank', { userId: session.userId })
+                if (flag?.[0]?.isFlag) {
+                  m = this.challengeFl(m, s, session as Session)
+                } else {
+                  m = this.challengeNf(m, s, session as Session)
+                }
+              }
+            }
+          }
+          m = this.makePool(m)
+          if (m["keyPool"].length === 0 || m["dgPool"] === 0) {
+            break
+          }
+        }
+        if (m["goingOn"]) {
+          const completeTime = Date.now()
+          const dt: number = completeTime - nowStamp
+          await this.updateChallengeRank(ctx, session.userId, session.username, dt)
+          return `挑战完成，用时${dt / 1000000}秒`
+        } else {
+          return "挑战失败"
+        }
+
+
+
+      })
     ctx.command('flag', '开启或关闭标记模式,仅对自己生效').alias('切换标记模式')
       .action(async ({ session }) => {
         const target = await ctx.model.get('minesweeper_ending_rank', { userId: session.userId }, ["isFlag"])
@@ -59,7 +155,7 @@ class EndingGame {
         if (options.force) {
           logger.info("强制重开")
         } else if (m?.isGoingOn()) {
-          session.send(this.renderX(m))
+          session.send(this.renderX(m, session.userId))
           return "已存在残局"
         }
         let x: number
@@ -137,7 +233,7 @@ class EndingGame {
       }
       // 更新 雷 和 空
       m = this.makePool(m)
-      const map = this.renderX(m)
+      const map = this.renderX(m, session.userId)
       await session.send(map)
       // 猜错了
       if (wrong.length > 0) {
@@ -187,7 +283,7 @@ class EndingGame {
 
       // 更新 雷 和 空
       m = this.makePool(m)
-      const map = this.renderX(m)
+      const map = this.renderX(m, session.userId)
       await session.send(map)
 
       // 猜错了
@@ -263,19 +359,75 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
         }
       })
 
+    ctx.command('ed.cr', '查看挑战榜').alias("挑战榜")
+      .action(async ({ }) => {
+        // 获取游戏信息
+        const rankInfo: MinesweeperRank[] = await ctx.model.get('minesweeper_ending_rank', {})
+        // 根据score属性进行降序排序
+        const tmp = []
+        for (var i of rankInfo) {
+          if (i.ChallengeScore != 0) {
+            tmp.push(i)
+          }
+        }
+        tmp.sort((a, b) => a.ChallengeScore - b.ChallengeScore)
+        const table: string = generateRankTable(tmp)
+        return table
+
+        // 定义一个函数来生成排行榜的纯文本
+        function generateRankTable(rankInfo: MinesweeperRank[]): string {
+          // 定义排行榜的模板字符串
+          const template = `
+挑战榜：
+排名  昵称   用时  
+--------------------
+${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${player.userName.padEnd(6, ' ')} ${player.ChallengeScore.toString().padEnd(4, ' ')}`).join('\n')}
+`
+          return template
+        }
+      })
+
   }
+
+
+  /**
+   * 无猜暴力求解
+   * @param m 
+   * @param cell 
+   * @returns 
+   */
+  findNoGuess(m: Minefield, cell: string) {
+    // 直到找到无猜
+    while (!m.isSolvableFrom(cell)) {
+      m = new Minefield(m.width, m.height, m.mines)
+    }
+    m.openCell(cell)
+    // 游戏已结束
+    if (!m.isGoingOn()) {
+      return this.findNoGuess(m, cell)
+    }
+    return m
+  }
+
+  /**
+   * 禁言模块
+   * @param dt 
+   * @param session 
+   */
   async ban(dt: number, session: Session) {
-    try{
+    try {
       if (session.platform !== 'onebot') {
         logger.info("该平台不支持禁言")
       } else {
         await session?.onebot.setGroupBan(session.guildId, session.userId, dt)
       }
-    }catch(e){
+    } catch (e) {
       logger.info(`禁言用户 ${session.userId} 失败`)
     }
-    
+
   }
+
+
   /**
    * 数据库操作，抄自[koishi-plugin-minesweeper](https://github.com/araea/koishi-plugin-minesweeper)
    * @param ctx 
@@ -291,8 +443,30 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
       await ctx.model.set('minesweeper_ending_rank', { userId: userId }, { userName: userName, score: rankInfo[0].score + score })
     }
   }
+
+
+  /**
+   * 设置挑战模式分数
+   * @param ctx 
+   * @param userId 
+   * @param userName 
+   * @param score 
+   */
+  async updateChallengeRank(ctx: Context, userId: string, userName: string, score: number) {
+    const rankInfo = await ctx.model.get('minesweeper_ending_rank', { userId: userId })
+    if (rankInfo.length === 0) {
+      await ctx.model.create('minesweeper_ending_rank', { userId: userId, userName: userName, ChallengeScore: score })
+    } else {
+      await ctx.model.set('minesweeper_ending_rank', { userId: userId }, { userName: userName, ChallengeScore: rankInfo[0].ChallengeScore + score })
+    }
+  }
+
+
   /**
    * 提示模块
+   * @param m 
+   * @param session 
+   * @returns 
    */
   getHint(m: Minefield, session: Session) {
     if (!m.isGoingOn()) return "不存在残局"
@@ -303,8 +477,94 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     for (var i of m["keyPool"]) {
       m.openCell(i)
     }
-    return this.renderX(m)
+    return this.renderX(m, session.userId)
   }
+
+
+  /**
+   * 
+   * @param m 挑战模式 FL
+   * @param inputString 
+   * @param session 
+   * @returns 
+   */
+  challengeFl(m: Minefield, inputString: string, session: Session) {
+    const tmp = []
+    for (let i = 0; i < inputString.length; i += 2) {
+      let pair = inputString.slice(i, i + 2);
+      if (pair.startsWith("0")) {
+        pair = this.remove0(pair)
+      }
+      // 清洗后的 cellId
+      if (pair) {
+        tmp.push(pair)
+      }
+    }
+    const c = m["dgPool"].filter(function (v) { return tmp.indexOf(v) > -1 })
+    const wrong = tmp.filter(function (v) { return m["dgPool"].indexOf(v) == -1 })
+    logger.info(`正确的雷：${m["dgPool"]}`)
+    logger.info(`输入：${tmp}`)
+    logger.info(`交集: ${c}`)
+    logger.info(`标错的：${wrong}`)
+
+    if (wrong.length > 0) {
+      m["goingOn"] = false
+    }
+    // 标出正确的雷
+    for (var s of c) {
+      m[s]["isFlagged"] = true
+    }
+    return m
+  }
+
+
+  /**
+   * 挑战模式 NF
+   * @param m 
+   * @param inputString 
+   * @param session 
+   * @returns 
+   */
+  challengeNf(m: Minefield, inputString: string, session: Session) {
+    const tmp = []
+    for (let i = 0; i < inputString.length; i += 2) {
+      let pair = inputString.slice(i, i + 2);
+      if (pair.startsWith("0")) {
+        pair = this.remove0(pair)
+      }
+      // 清洗后的 cellId
+      if (pair) {
+        tmp.push(pair)
+      }
+    }
+    const c = m["keyPool"].filter(function (v) { return tmp.indexOf(v) > -1 })
+    const wrong = tmp.filter(function (v) { return m["keyPool"].indexOf(v) == -1 })
+    logger.info(`谜底：${m["keyPool"]}`)
+    logger.info(`输入：${tmp}`)
+    logger.info(`交集: ${c}`)
+    logger.info(`开错的：${wrong}`)
+
+    if (wrong.length > 0) {
+      m["goingOn"] = false
+    }
+
+    // 打开正确的方块
+    for (var s of c) {
+      m.openCell(s)
+    }
+    return m
+  }
+
+
+  /**
+   * 睡眠函数
+   * @param ms 等待时间
+   * @returns 
+   */
+  sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
 
   /**
    * 一.初始化，生成一个小的残局
@@ -315,8 +575,8 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    * @param z 雷
    */
   initialize(x: number = 4, y: number = 4, z: number = 6): Minefield {
-    this.mineNum = z
     let m = new Minefield(x, y, z)
+    m = this.findNoGuess(m, "0")
     const cells = x * y
 
     // 破空
@@ -333,6 +593,8 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     this.makeEnding(m)
     return m
   }
+
+
   /**
    * 更新 雷 和 空的池子
    * @param m Minefield
@@ -357,6 +619,8 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     }
     return m
   }
+
+
   /**
    * random openCell
    */
@@ -379,13 +643,16 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
       m[cell]["isFlagged"] = true
       flagCount++
     }
+    return m
   }
+
+
   /**
    * 渲染雷图
    * @param m Minefield
    * @returns 消息
    */
-  renderX(m: Minefield) {
+  renderX(m: Minefield, userId: string) {
     let x: number = m.width
     let y: number = m.height
     const dm = 94
@@ -394,7 +661,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     const bios = 0
     const mine_div = []
     const head_css = `position: absolute;left: 10px;top: 10px;font-size: 40px`
-    mine_div.push(<div style={head_css}>雷数:{this.mineNum}___剩余BV:{m["keyPool"].length} </div>)
+    mine_div.push(<div style={head_css}>雷数:{m["mines"]}___剩余BV:{m["keyPool"].length} </div>)
     for (var i: number = 0; i < (x * y); i++) {
       const ii = m[String(i)]
       var style_str = `position: absolute;left: ${(i % x) * dm + biox}px;top: ${Math.floor(i / x) * dm + bioy}px`
@@ -412,7 +679,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
       }
 
     }
-    return <html>
+    return <><>{h.at(userId)}</><html>
       <div style={{
         width: x * dm + bios + biox + 'px',
         height: y * dm + bios + bioy + 'px',
@@ -420,15 +687,25 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
       }}></div>
       {mine_div}
     </html>
+    </>
   }
+
+
   /**
    * 重置游戏
+   * @param session 
+   * @param x 
+   * @param y 
+   * @param z 
+   * @returns 
    */
   renew(session: Session, x: number = 4, y: number = 4, z: number = 6) {
-    const m: Minefield = this.initialize(x, y, z)
+    let m: Minefield = this.initialize(x, y, z)
     this.minefieldDict[session.channelId] = m
-    return this.renderX(m)
+    return this.renderX(m, session.userId)
   }
+
+
   /**
    * 根据雷图的行和列计算出合适的雷数
    * @param x 行
@@ -440,6 +717,8 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     const mineNums = cells * 0.40
     return Math.floor(mineNums)
   }
+
+
   /**
    * 删除数字前面的0
    * 01，0002 返回 1 2 
@@ -467,12 +746,17 @@ koishi-plugin-minesweeper-ending 是一个基于 Koishi 框架的插件，实现
 
 ### 规则
 
+- 残局模式
 1. 玩家在群里发送 \`残局\`将开启游戏
 2. 使用 \`打开\` 或 \`标记\` 命令，打开BV或标记雷
 3. 玩家需要将所有非雷方块打开或者将所有雷标记出来方终结比赛，终结比赛的玩家获得双倍积分
 4. 胜利玩家将获得 \`剩余BV*1\` 积分奖励，未能一次性开出所有BV或标记出所有雷的玩家将扣除1积分
 5. 标错或开错将受到禁言惩罚, 扣5积分
 6. 答不全的玩家获得一半的积分
+
+- 挑战模式
+1. 输入 \`fight\` 开启挑战， 玩家每天只能挑战一次
+2. 输入 \`挑战榜\` 查看挑战模式排行榜
 
 ## 🌠 后续计划
 
@@ -507,10 +791,18 @@ koishi-plugin-minesweeper-ending 是一个基于 Koishi 框架的插件，实现
   - 选项 -f: 强制开启，会把覆盖已存在的残局
 - \`ed.s|破解\`：开始扫雷游戏，需要一次性输入序号打开所有的空格
   - 序号必须是连续的，示例：破解 041201141115060107
+  - 快捷指令，可以使用 s0412, 该指令等价于 破解 0412
+- \`ed.f|标记\`: 输入雷的序号，将所有雷标记出来同样可以获得胜利
+  - 快捷指令，可以使用 f0412 , 该指令等价于 标记 0412
+- \`flag\`: 开启或关闭标记模式，可以使用 0412 代替 f0412 或 s0412, 取决于当前是否开启标记模式
 - \`ed.end|不玩了\`：停止扫雷游戏，会清除当前的游戏状态
 - \`ed.l|揭晓\`：获取扫雷所有的答案
 - \`ed.n|刷新残局\`：刷新残局
 - \`ed.r|雷神殿\`：查看扫雷排行榜，会显示前十名玩家的昵称和积分。成功破解积分+1；破解失败积分-1。
+
+- \`fight\`: 开启挑战
+- \`挑战榜\`: 查看挑战模式排行榜
+
 `
   export interface Config {
     MinHintTime: number
@@ -519,15 +811,36 @@ koishi-plugin-minesweeper-ending 是一个基于 Koishi 框架的插件，实现
     colorForSerialNum: string
     FontSizeForSerialNum: number
     BackGroundColor: string
+    width: number
+    height: number
+    mines: number
+    widthC: number
+    heightC: number
+    minesC: number
+
   }
-  export const Config: Schema<Config> = Schema.object({
-    MinHintTime: Schema.number().default(15000).description("获取提示的冷却时间"),
-    DifficultyLevel: Schema.percent().role('slider').default(0.5).description("难度等级,0最简单，1最难"),
-    theme: Schema.string().default('chocolate').description("扫雷的皮肤"),
-    colorForSerialNum: Schema.string().default('gray').description("方块序列号的颜色"),
-    FontSizeForSerialNum: Schema.number().default(40).description("方块序列号的字体大小"),
-    BackGroundColor: Schema.string().default("white").description("背景颜色")
-  })
+  export const Config: Schema = Schema.intersect([
+    Schema.object({
+      MinHintTime: Schema.number().default(15000).description("获取提示的冷却时间"),
+      DifficultyLevel: Schema.percent().role('slider').default(0.5).description("难度等级,0最简单，1最难"),
+    }).description("玩法设置"),
+    Schema.object({
+      theme: Schema.string().default('chocolate').description("扫雷的皮肤"),
+      colorForSerialNum: Schema.string().default('gray').description("方块序列号的颜色"),
+      FontSizeForSerialNum: Schema.number().default(40).description("方块序列号的字体大小"),
+      BackGroundColor: Schema.string().default("white").description("背景颜色"),
+    }).description("主题设置"),
+    Schema.object({
+      width: Schema.number().default(4).description("宽度"),
+      heigth: Schema.number().default(4).description("高度"),
+      mines: Schema.number().default(6).description("雷数"),
+    }).description("残局地图设置, 应当使方块数小于100, 否则无法进行游戏操作"),
+    Schema.object({
+      widthC: Schema.number().default(6).description("宽度"),
+      heigthC: Schema.number().default(6).description("高度"),
+      minesC: Schema.number().default(15).description("雷数"),
+    }).description("挑战模式地图设置, 应当使方块数小于100, 否则无法进行游戏操作")
+  ]) 
 }
 
 
