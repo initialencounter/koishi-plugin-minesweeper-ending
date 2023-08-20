@@ -46,6 +46,8 @@ koishi-plugin-minesweeper-ending 是一个基于 Koishi 框架的插件，实现
   - `DifficultyLevel: 0.5 // 残局的难易程度，0-1，0最简单，1最难，默认为 0.5`
   - `wrongSleep: 5000 //出错后的冷却时间` 
   - `EntryFee: 10 //挑战模式费用`
+  - `InitFlag: true //开启后将在残局上随机标记`
+  - `InitOpen: true //开启后将在残局上随机打开方块`
 
 - 主题配置
   - 皮肤 theme: string

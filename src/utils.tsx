@@ -78,31 +78,37 @@ export async function updateRank(ctx: Context, info: GameInfo) {
  * @param score 
  */
 
-export async function updateChallengeRank(session:Session,ctx: Context, userId: string, userName: string, score: number) {
+export async function updateChallengeRank(session: Session, ctx: Context, userId: string, userName: string, score: number) {
     // 获取游戏信息
     const rank: MinesweeperRank[] = await ctx.model.get('minesweeper_ending_rank', {})
     // 根据score属性进行降序排序
     const tmp: MinesweeperRank[] = []
     for (var i of rank) {
-      if (i.ChallengeScore != 0) {
-        tmp.push(i)
-      }
+        if (i.ChallengeScore != 0) {
+            tmp.push(i)
+        }
     }
     tmp.sort((a, b) => a.ChallengeScore - b.ChallengeScore)
     let title = ''
-    if(tmp?.[0]?.userId!==userId){
-        await ctx.model.set('minesweeper_ending_rank', { title: "雷帝" }, { title:"" })
-        title="雷帝"
+    if (tmp?.[0]?.userId !== userId) {
+        session.send(h.at(tmp?.[0]?.userId)+"新的雷帝诞生了")
+        await ctx.model.set('minesweeper_ending_rank', { title: "雷帝" }, { title: "" })
+        title = "雷帝"
     }
     const rankInfo = await ctx.model.get('minesweeper_ending_rank', { userId: userId })
     if (rankInfo.length === 0) {
         await ctx.model.create('minesweeper_ending_rank', { userId: userId, userName: userName, ChallengeScore: score })
     } else {
-        const ds = rankInfo[0].ChallengeScore - score
-        if(ds>0){
-            session.send(`恭喜你，进步了 ${ds}s`)
-            await ctx.model.set('minesweeper_ending_rank', { userId: userId }, { userName: userName, ChallengeScore: score,title:title })
+        if (rankInfo[0].ChallengeScore == 0) {
+            await ctx.model.set('minesweeper_ending_rank', { userId: userId }, { userName: userName, ChallengeScore: score, title: title })
+        } else {
+            const ds = rankInfo[0].ChallengeScore - score
+            if (ds > 0) {
+                session.send(`恭喜你，进步了 ${ds}s`)
+                await ctx.model.set('minesweeper_ending_rank', { userId: userId }, { userName: userName, ChallengeScore: score, title: title })
+            }
         }
+
     }
 }
 
@@ -185,7 +191,7 @@ export async function renderProfiles(ctx: Context, info: Pick<MinesweeperRank, K
             title = "探险家"
         } else if (challengeScore < 100000) {
             title = "炸弹专家"
-        }else if (challengeScore < 40000) {
+        } else if (challengeScore < 40000) {
             title = "雷界传奇"
         } else if (challengeScore < 30000) {
             title = "扫雷王"

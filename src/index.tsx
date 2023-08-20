@@ -70,8 +70,9 @@ class EndingGame {
       autoInc: true,
     })
     this.minefieldDict = {}
+    
 
-    ctx.command("扫雷生涯 [at]","查看自己或其他玩家的生涯").alias("我的信息","生涯").action(async ({ session }) => {
+    ctx.command("扫雷生涯 [at]", "查看自己或其他玩家的生涯").alias("我的信息", "生涯").action(async ({ session }) => {
       const target = session.content.match(/(?<=<at id=")([\s\S]*?)(?="\/>)/g)
       let uid: string = session.userId
       if (target.length > 0) {
@@ -82,7 +83,7 @@ class EndingGame {
     })
 
     // 挑战玩法
-    ctx.command("fight","开启扫雷挑战模式")
+    ctx.command("fight", "开启扫雷挑战模式")
       .alias("挑战模式")
       .action(async ({ session }) => {
         let last = await ctx.model.get('minesweeper_ending_rank', { userId: session.userId })
@@ -694,20 +695,25 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     let flagCount = 0
     const keyLength = m["keyPool"].length
     const dangerLength = m["dgPool"].length
-    while (openCount < ((1 - this.config.DifficultyLevel) * keyLength)) {
-      const randomNum = Math.floor(Math.random() * m["keyPool"].length)
-      const cell = m["keyPool"][randomNum]
-      m["keyPool"].splice(randomNum, 1)
-      m.openCell(cell)
-      openCount++
+    if (this.config.InitOpen) {
+      while (openCount < ((1 - this.config.DifficultyLevel) * keyLength)) {
+        const randomNum = Math.floor(Math.random() * m["keyPool"].length)
+        const cell = m["keyPool"][randomNum]
+        m["keyPool"].splice(randomNum, 1)
+        m.openCell(cell)
+        openCount++
+      }
     }
-    while (flagCount < (this.config.DifficultyLevel * dangerLength * 0.6)) {
-      const randomNumD = Math.floor(Math.random() * m["dgPool"].length)
-      const cell = m["dgPool"][randomNumD]
-      m["dgPool"].splice(randomNumD, 1)
-      m[cell]["isFlagged"] = true
-      flagCount++
+    if (this.config.InitFlag) {
+      while (flagCount < (this.config.DifficultyLevel * dangerLength * 0.6)) {
+        const randomNumD = Math.floor(Math.random() * m["dgPool"].length)
+        const cell = m["dgPool"][randomNumD]
+        m["dgPool"].splice(randomNumD, 1)
+        m[cell]["isFlagged"] = true
+        flagCount++
+      }
     }
+
     return m
   }
 
