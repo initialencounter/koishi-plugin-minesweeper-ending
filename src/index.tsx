@@ -71,7 +71,7 @@ class EndingGame {
     })
     this.minefieldDict = {}
 
-    ctx.command("生涯").alias("我的消息").action(async ({ session }) => {
+    ctx.command("扫雷生涯 [at]","查看自己或其他玩家的生涯").alias("我的信息","生涯").action(async ({ session }) => {
       const target = session.content.match(/(?<=<at id=")([\s\S]*?)(?="\/>)/g)
       let uid: string = session.userId
       if (target.length > 0) {
@@ -82,7 +82,7 @@ class EndingGame {
     })
 
     // 挑战玩法
-    ctx.command("fight")
+    ctx.command("fight","开启扫雷挑战模式")
       .alias("挑战模式")
       .action(async ({ session }) => {
         let last = await ctx.model.get('minesweeper_ending_rank', { userId: session.userId })

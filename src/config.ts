@@ -18,9 +18,9 @@ export const MineConfig = Schema.intersect([
         BackGroundColor: Schema.string().default("white").description("背景颜色"),
     }).description("主题设置"),
     Schema.object({
-        width: Schema.number().default(4).description("宽度"),
-        height: Schema.number().default(4).description("高度"),
-        mines: Schema.number().default(6).description("雷数"),
+        width: Schema.number().default(5).description("宽度"),
+        height: Schema.number().default(5).description("高度"),
+        mines: Schema.number().default(10).description("雷数"),
     }).description("残局地图设置, 应当使方块数小于100, 否则无法进行游戏操作"),
     Schema.object({
         widthC: Schema.number().default(6).description("宽度"),
