@@ -90,8 +90,8 @@ export async function updateChallengeRank(session: Session, ctx: Context, userId
     }
     tmp.sort((a, b) => a.ChallengeScore - b.ChallengeScore)
     let title = ''
-    if (tmp?.[0]?.userId !== userId) {
-        session.send(h.at(tmp?.[0]?.userId)+"新的雷帝诞生了")
+    if (tmp?.[0]?.userId !== userId && tmp?.[0]?.ChallengeScore > score) {
+        session.send(h.at(tmp?.[0]?.userId) + "新的雷帝诞生了")
         await ctx.model.set('minesweeper_ending_rank', { title: "雷帝" }, { title: "" })
         title = "雷帝"
     }
