@@ -323,7 +323,7 @@ class EndingGame {
           wins: 0
         }
         await updateRank(ctx, info)
-        return `捣乱的叉出去！${tmp.filter((v) => { return c.indexOf(v) > -1 })}`
+        return `捣乱的叉出去！${wrong}`
       }
       if (m["keyPool"]?.length > 0) {
         // 开不全
@@ -408,7 +408,7 @@ class EndingGame {
           wins: 0
         }
         await updateRank(ctx, info)
-        return `捣乱的叉出去！${tmp.filter((v) => { return c.indexOf(v) > -1 })}`
+        return `捣乱的叉出去！${wrong}`
       }
 
       // 标不全
