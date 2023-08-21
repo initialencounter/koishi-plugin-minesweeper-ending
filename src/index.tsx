@@ -666,7 +666,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    * @param y 列
    * @param z 雷
    */
-  initialize(x: number = 4, y: number = 4, z: number = 6): Minefield {
+  initialize(x: number = this.config.width, y: number = this.config.height, z: number = this.config.mines): Minefield {
     let m = new Minefield(x, y, z)
     m = findNoGuess(m, "0")
     const cells = x * y
@@ -770,7 +770,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    * @param z 
    * @returns 
    */
-  renew(session: Session, x: number = 4, y: number = 4, z: number = 6) {
+  renew(session: Session, x: number = this.config.width, y: number = this.config.height, z: number = this.config.mines) {
     let m: Minefield = this.initialize(x, y, z)
     this.minefieldDict[session.channelId] = m
     return this.renderX(m, session.userId)
