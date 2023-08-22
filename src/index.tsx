@@ -443,12 +443,13 @@ class EndingGame {
     ctx.middleware(async (session, next) => {
       if (session.content.startsWith("生涯")) {
         const target = session.content.match(/(?<=<at id=")([\s\S]*?)(?="\/>)/g)
-        let uid: string = session.userId
         if (target.length > 0) {
-          uid = target[0]
+          const uid = target[0]
+          const porfile: Pick<MinesweeperRank, Keys<MinesweeperRank, any>> = await getProfiles(ctx, uid)
+          return await renderProfiles(ctx, porfile)
+        }else{
+          return next()
         }
-        const porfile: Pick<MinesweeperRank, Keys<MinesweeperRank, any>> = await getProfiles(ctx, uid)
-        return await renderProfiles(ctx, porfile)
       }
       if (!this.minefieldDict[session.channelId]?.isGoingOn()) {
         return next()
