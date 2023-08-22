@@ -8,7 +8,8 @@ export const MineConfig = Schema.intersect([
         wrongSleep: Schema.number().default(5000).description("猜错后的冷却时间"),
         DifficultyLevel: Schema.percent().role('slider').default(0.5).description("难度等级,0最简单，1最难"),
         InitFlag: Schema.boolean().default(true).description("残局初始化插旗"),
-        InitOpen: Schema.boolean().default(true).description("残局初始化插旗")
+        InitOpen: Schema.boolean().default(true).description("残局初始化插旗"),
+        Guess: Schema.boolean().default(true).description("残局有猜，（推荐）")
     }).description("残局玩法设置"),
     Schema.object({
         EntryFee: Schema.number().default(10).description("挑战模式门票费用"),
@@ -38,6 +39,7 @@ export interface MineConfig {
     DifficultyLevel: number
     InitFlag: boolean
     InitOpen: boolean
+    Guess: boolean
 
     EntryFee: number
 

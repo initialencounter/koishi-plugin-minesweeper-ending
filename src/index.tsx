@@ -669,7 +669,11 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    */
   initialize(x: number = this.config.width, y: number = this.config.height, z: number = this.config.mines): Minefield {
     let m = new Minefield(x, y, z)
-    m = findNoGuess(m, "0")
+
+    // 无猜
+    if(!this.config.Guess){
+      m = findNoGuess(m, "0")
+    }
     const cells = x * y
 
     // 破空
