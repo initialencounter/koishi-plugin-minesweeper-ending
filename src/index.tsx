@@ -2,7 +2,7 @@ import { Context, Schema, Logger, Dict, Session, h, Keys } from 'koishi';
 import { } from '@koishijs/plugin-adapter-onebot';
 import { } from 'koishi-plugin-puppeteer';
 import Minefield from "./minesweeper";
-import { resolve } from 'path';
+import { renderX, setTheme } from './render'
 export const name = 'minesweeper-ending';
 
 import { MineConfig, mineUsage } from "./config"
@@ -48,6 +48,7 @@ class EndingGame {
   banList: Dict
   theme: string
   constructor(private ctx: Context, private config: MineConfig) {
+    setTheme(config.theme)
     this.banList = {}
     this.theme = this.config.theme
     ctx = ctx.guild()
@@ -70,7 +71,7 @@ class EndingGame {
       autoInc: true,
     })
     this.minefieldDict = {}
-    
+
 
     ctx.command("扫雷生涯 [at]", "查看自己或其他玩家的生涯").alias("我的信息", "生涯").action(async ({ session }) => {
       const target = session.content.match(/(?<=<at id=")([\s\S]*?)(?="\/>)/g)
@@ -124,7 +125,7 @@ class EndingGame {
         const nowStamp = Date.now()
         let m = new Minefield(this.config.widthC, this.config.heightC, this.config.minesC)
         m = makePool(m)
-        session.send(this.renderX(m, session.userId))
+        session.send(h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png"))
         const cell = await session.prompt(86400000)
         if (!cell) {
           return "挑战失败"
@@ -136,12 +137,12 @@ class EndingGame {
             return "挑战失败"
           }
         }
-        m = await findNoGuess(m, cell)
+        m = findNoGuess(m, cell)
         m = makePool(m)
         m["goingOn"] = true
         while (m["goingOn"] == true) {
           m = makePool(m)
-          session.send(this.renderX(m, session.userId))
+          session.send(h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png"))
           var input = await session.prompt(86400000)
           if (!input) {
             return h.at(session.userId) + "输入超时, 挑战失败"
@@ -213,7 +214,7 @@ class EndingGame {
         if (options.force) {
           logger.info("强制重开")
         } else if (m?.isGoingOn()) {
-          session.send(this.renderX(m, session.userId))
+          session.send(h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png"))
           return "已存在残局"
         }
         const info: GameInfo = {
@@ -249,18 +250,18 @@ class EndingGame {
             z = getMineNums(x, y)
           }
         }
-        return this.renew(session as Session, x, y, z)
+        return await this.renew(session as Session, x, y, z)
       })
     ctx.command("ed.end", "结束 ed").alias('不玩了').action(({ session }) => {
       this.minefieldDict[session.guildId] = null
       return "游戏结束"
     })
-    ctx.command("ed.n", "刷新 ed").alias("刷新残局", "重开").action(({ session }) => {
+    ctx.command("ed.n", "刷新 ed").alias("刷新残局", "重开").action(async ({ session }) => {
       const m: Minefield = this.minefieldDict[session.channelId]
       if (!m) {
         return "不存在残局"
       }
-      return this.renew(session as Session, m.width, m.height, m.mines)
+      return await this.renew(session as Session, m.width, m.height, m.mines)
     })
     ctx.command("ed.l", "查看地雷").alias("揭晓").action(({ session }) => {
       let m = this.minefieldDict[session.channelId]
@@ -308,8 +309,7 @@ class EndingGame {
       }
       // 更新 雷 和 空
       m = makePool(m)
-      const map = this.renderX(m, session.userId)
-      await session.send(map)
+      await session.send(h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png"))
       // 猜错了
       if (wrong.length > 0) {
         await this.ban(session.userId)
@@ -392,8 +392,7 @@ class EndingGame {
 
       // 更新 雷 和 空
       m = makePool(m)
-      const map = this.renderX(m, session.userId)
-      await session.send(map)
+      await session.send(h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png"))
 
       // 猜错了
       if (wrong.length > 0) {
@@ -447,7 +446,7 @@ class EndingGame {
           const uid = target[0]
           const porfile: Pick<MinesweeperRank, Keys<MinesweeperRank, any>> = await getProfiles(ctx, uid)
           return await renderProfiles(ctx, porfile)
-        }else{
+        } else {
           return next()
         }
       }
@@ -570,7 +569,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    * @param session 
    * @returns 
    */
-  getHint(m: Minefield, session: Session) {
+  async getHint(m: Minefield, session: Session) {
     if (!m.isGoingOn()) return "不存在残局"
     const now = Date.now()
     if (now - m.start_time < this.config.MinHintTime) {
@@ -579,7 +578,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     for (var i of m["keyPool"]) {
       m.openCell(i)
     }
-    return this.renderX(m, session.userId)
+    return h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png")
   }
 
 
@@ -671,7 +670,7 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
     let m = new Minefield(x, y, z)
 
     // 无猜
-    if(!this.config.Guess){
+    if (!this.config.Guess) {
       m = findNoGuess(m, "0")
     }
     const cells = x * y
@@ -724,50 +723,6 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
 
 
   /**
-   * 渲染雷图
-   * @param m Minefield
-   * @returns 消息
-   */
-  renderX(m: Minefield, userId: string) {
-    let x: number = m.width
-    let y: number = m.height
-    const dm = 94
-    const biox = 15
-    const bioy = 70
-    const bios = 0
-    const mine_div = []
-    const head_css = `position: absolute;left: 10px;top: 10px;font-size: 40px`
-    mine_div.push(<div style={head_css}>雷数:{m["mines"]}___剩余BV:{m["keyPool"].length} </div>)
-    for (var i: number = 0; i < (x * y); i++) {
-      const ii = m[String(i)]
-      var style_str = `position: absolute;left: ${(i % x) * dm + biox}px;top: ${Math.floor(i / x) * dm + bioy}px`
-      var style_center_text = `position: absolute;font-size: ${this.config.FontSizeForSerialNum}px;color: ${this.config.colorForSerialNum};left: ${(i % x) * dm + 28 + biox}px;top: ${Math.floor(i / x) * dm - 18 + bioy}px`
-      if (ii["isOpen"]) {
-        // 打开
-        mine_div.push(<img src={resolve(this.ctx.baseDir, `data/minesweeper/theme/${this.theme}/type${ii["mines"]}.png`)} style={style_str}></img>)
-      }
-      else if (ii["isFlagged"]) {
-        mine_div.push(<img src={resolve(this.ctx.baseDir, `data/minesweeper/theme/${this.theme}/flag.png`)} style={style_str}></img>)
-      }
-      else {
-        // 未打开<p style="position:relative;left:45px;top:30px;color:red;">{i}</p>
-        mine_div.push(<img src={resolve(this.ctx.baseDir, `data/minesweeper/theme/${this.theme}/closed.png`)} style={style_str}><p style={style_center_text}>{i < 10 ? "0" + i : i}</p></img>)
-      }
-
-    }
-    return <><>{h.at(userId)}</><html>
-      <div style={{
-        width: x * dm + bios + biox + 'px',
-        height: y * dm + bios + bioy + 'px',
-        background: this.config.BackGroundColor,
-      }}></div>
-      {mine_div}
-    </html>
-    </>
-  }
-
-
-  /**
    * 重置游戏
    * @param session 
    * @param x 
@@ -775,10 +730,10 @@ ${rankInfo.map((player, index) => ` ${String(index + 1).padStart(2, ' ')}   ${pl
    * @param z 
    * @returns 
    */
-  renew(session: Session, x: number = this.config.width, y: number = this.config.height, z: number = this.config.mines) {
+  async renew(session: Session, x: number = this.config.width, y: number = this.config.height, z: number = this.config.mines) {
     let m: Minefield = this.initialize(x, y, z)
     this.minefieldDict[session.channelId] = m
-    return this.renderX(m, session.userId)
+    return h.at(session.userId) + `\n雷数:${m["mines"]}\n剩余BV:${m["keyPool"].length}` + h.image(await renderX(m), "image/png")
   }
 
 
