@@ -16,9 +16,7 @@ export const MineConfig = Schema.intersect([
     }),
     Schema.object({
         theme: Schema.string().default('chocolate').description("扫雷的皮肤"),
-        colorForSerialNum: Schema.string().default('gray').description("方块序列号的颜色"),
-        FontSizeForSerialNum: Schema.number().default(40).description("方块序列号的字体大小"),
-        BackGroundColor: Schema.string().default("white").description("背景颜色"),
+        colorForSerialNum: Schema.string().default('#000000ff').description("方块序列号的颜色,格式：十六进制字符串")
     }).description("主题设置"),
     Schema.object({
         width: Schema.number().default(5).description("宽度"),
@@ -45,9 +43,6 @@ export interface MineConfig {
 
     theme: string
     colorForSerialNum: string
-    FontSizeForSerialNum: number
-    BackGroundColor: string
-
 
     width: number
     height: number
