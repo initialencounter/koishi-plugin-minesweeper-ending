@@ -14,8 +14,20 @@ let textColor = [0, 0, 0, 255]
  * @param config 
  */
 export async function setTheme(config: MineConfig) {
+    // 十六进制颜色转RGBA
     textColor = hexToRgba(config.colorForSerialNum)
-    const themePath = resolve(__dirname, "../../../data/minesweeper/theme/", config.theme)
+    const themePath = resolve(__dirname, "theme", config.theme)
+    const imageTypes = ['closed', 'flag', 'type0', 'type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8'];  // 扫雷的皮肤文件名
+    for (var type of imageTypes) {
+        imgArr[type] = await readImageAsArray(resolve(themePath, `${type}.png`))
+    }
+    for (var i = 0; i < 10; i++) {
+        NumImg[i] = await readImageAsArray(resolve(__dirname, `text/text${i}.png`)) //扫雷方块的编号上的数字
+    }
+}
+async function main() {
+    textColor = hexToRgba("#fff000ff")
+    const themePath = resolve(__dirname, "theme/", "wom")
     const imageTypes = ['closed', 'flag', 'type0', 'type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8'];
     for (var type of imageTypes) {
         imgArr[type] = await readImageAsArray(resolve(themePath, `${type}.png`))
@@ -23,15 +35,11 @@ export async function setTheme(config: MineConfig) {
     for (var i = 0; i < 10; i++) {
         NumImg[i] = await readImageAsArray(resolve(__dirname, `text/text${i}.png`))
     }
-}
-async function main() {
-    await setTheme(new MineConfig())
-    const m = new Minefield(4, 4, 3)
-    m.openCell("2")
+    const m = new Minefield(4, 4, 6)
+    m.openCell("6")
     const img = await renderX(m)
     fs.writeFileSync('test.png', Buffer.from(img))
 }
-// main()
 
 
 /**
@@ -40,13 +48,9 @@ async function main() {
  * @returns 
  */
 async function addText(num: number) {
-    for (var i = 0; i < 10; i++) {
-        NumImg[i] = await readImageAsArray(resolve(__dirname, `text/text${i}.png`))
-    }
     const [s1, s2] = (num < 10 ? "0" + num : String(num)).split('')
-    const [s1Img, s2Img] = [NumImg[s1], NumImg[s2]]
+    const [s1Img, s2Img] = [NumImg[s1], NumImg[s2]]  //在这里读取，渲染到方块上
     const big = deepCopyArray(imgArr['closed'])
-    // const big = await readImageAsArray(resolve(__dirname, "../../../data/minesweeper/theme/wom/closed.png"))
     for (let i = 0; i < 34; i++) {
         for (let j = 0; j < 20; j++) {
             if (s1Img[i][j][0] != 255) {

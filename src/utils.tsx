@@ -2,7 +2,6 @@ import { Context, Keys, Logger, Session, h } from 'koishi'
 import { } from '@koishijs/plugin-adapter-onebot'
 import Minefield from "./minesweeper";
 import { MinesweeperRank } from '.';
-import { } from 'koishi-plugin-puppeteer';
 export const name = 'minesweeper-ending'
 const logger = new Logger(name)
 export interface GameInfo {
@@ -201,48 +200,13 @@ export async function renderProfiles(ctx: Context, info: Pick<MinesweeperRank, K
             title = "老祖"
         }
     }
-    return <html><div style="
-                            position: relative;
-                            display: flex;
-                            align-items: center;
-                            background-color: #2e3248;
-                            border-radius: 10px;
-                            padding: 10px;">
-        <div class="avatar" style="margin-right: 10px;">
-
-        </div>
-        <div class="info" style="font-family: Arial, sans-serif;color: #7d8687;">
-            <div id="profile" style="position: relative;
-                                    display: grid;
-                                    flex-wrap: wrap;
-                                    gap: var(--card-margin);
-                                    grid-template-columns: repeat(2, minmax(300px, 2fr));
-                                    margin: var(--card-margin) 0;
-                                    justify-items: left;
-                                    font-size: 40px;
-                                    margin: 0;
-                                    color: #999;">
-                <h1 id="username" style=" font-size: 60px;margin: 0;">{info.userName}</h1>
-                <img src={`http://q1.qlogo.cn/g?b=qq&nk=${info.userId}&s=100`} style="border-radius: 50%;"></img>
-                <h2 id="title">头衔：{title}</h2>
-            </div>
-            <div id="data" style="position: relative;
-                                    display: grid;
-                                    flex-wrap: wrap;
-                                    gap: var(--card-margin);
-                                    grid-template-columns: repeat(2, minmax(300px, 2fr));
-                                    margin: var(--card-margin) 0;
-                                    justify-items: left;
-                                    font-size: 35px;
-                                    margin: 5px 0;">
-                <p id="isFlag">标记模式：{info.isFlag ? "标记" : "无标记"}</p>
-                <p id="score">积分: {info.score}</p>
-                <p id="challengeScore">挑战: {info.ChallengeScore / 1000}s</p>
-                <p id="games">局数: {info.games}</p>
-                <p id="winRate">胜率: {(info.wins / info.games) * 100}%</p>
-                <p id="openNums">开启方块: {info.openNums}</p>
-            </div>
-
-        </div>
-    </div></html>
+    return`${info.userName}\n
+头衔：${title}\n
+标记模式：${info.isFlag ? "标记" : "无标记"}\n
+积分: ${info.score}\n
+挑战: ${info.ChallengeScore / 1000}s\n
+局数: ${info.games}\n
+胜率: ${(info.wins / info.games) * 100}%\n
+开启方块: ${info.openNums}\n
+`+h.image(`http://q1.qlogo.cn/g?b=qq&nk=${info.userId}&s=100`)
 }

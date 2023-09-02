@@ -1,6 +1,4 @@
 import { Context, Schema, Logger, Dict, Session, h, Keys } from 'koishi';
-import { } from '@koishijs/plugin-adapter-onebot';
-import { } from 'koishi-plugin-puppeteer';
 import Minefield from "./minesweeper";
 import { renderX, setTheme } from './render'
 export const name = 'minesweeper-ending';
@@ -76,7 +74,7 @@ class EndingGame {
     ctx.command("扫雷生涯 [at]", "查看自己或其他玩家的生涯").alias("我的信息", "生涯").action(async ({ session }) => {
       const target = session.content.match(/(?<=<at id=")([\s\S]*?)(?="\/>)/g)
       let uid: string = session.userId
-      if (target.length > 0) {
+      if (target?.length > 0) {
         uid = target[0]
       }
       const porfile: Pick<MinesweeperRank, Keys<MinesweeperRank, any>> = await getProfiles(ctx, uid)
