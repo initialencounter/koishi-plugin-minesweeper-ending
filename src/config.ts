@@ -15,7 +15,7 @@ export const MineConfig = Schema.intersect([
         EntryFee: Schema.number().default(10).description("挑战模式门票费用"),
     }),
     Schema.object({
-        theme: Schema.string().default('chocolate').description("扫雷的皮肤"),
+        theme: Schema.string().default('chocolate').description("扫雷的皮肤,目前自带了 wom 和 chocolate,可在模块目录中自定义皮肤"),
         colorForSerialNum: Schema.string().default('#000000ff').description("方块序列号的颜色,格式：十六进制字符串")
     }).description("主题设置"),
     Schema.object({

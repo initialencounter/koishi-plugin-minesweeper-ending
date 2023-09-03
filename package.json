@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-minesweeper-ending",
-  "description": "扫雷残局，无猜，高性能原生图像处理，自定义皮肤",
-  "version": "1.5.0",
+  "description": "扫雷残局，无猜，高性能原生图像处理",
+  "version": "1.5.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -34,5 +34,17 @@
   ],
   "peerDependencies": {
     "koishi": "^4.13.0"
+  },
+  "koishi": {
+    "browser": true,
+    "description": {
+      "en": "Minesweeper, no guesswork, high-performance native image processing",
+      "zh": "扫雷残局，无猜，高性能原生图像处理"
+    },
+    "service": {
+      "required": [
+        "database"
+      ]
+    }
   }
 }
