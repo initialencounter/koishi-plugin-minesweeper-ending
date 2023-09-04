@@ -4,9 +4,45 @@ import { PNG } from 'pngjs';
 import Minefield from "./minesweeper";
 import { MineConfig } from "./config"
 
+import Jimp from 'jimp';
+
+// 创建一个函数，用于将多个小图片拼接成一张大图
+async function createBigImage(imagePaths: string[], outputPath: string) {
+  try {
+    // 创建一个新的 Jimp 图片对象，作为大图
+    const bigImage = new Jimp(800, 600); // 这里的尺寸可以根据需要调整
+
+    // 循环加载小图片并将其添加到大图中
+    for (let i = 0; i < imagePaths.length; i++) {
+      const imagePath = imagePaths[i];
+      const smallImage = await Jimp.read(imagePath);
+
+      // 将小图片粘贴到大图的指定位置
+      const x = i * 200; // 每个小图片的宽度为200，你可以根据需要调整
+      const y = 0; // 在大图的顶部添加小图片
+      bigImage.blit(smallImage, x, y);
+    }
+
+    // 保存生成的大图
+    await bigImage.writeAsync(outputPath);
+    console.log('大图已生成：', outputPath);
+  } catch (error) {
+    console.error('出现错误：', error);
+  }
+}
+
+// 调用函数并传入小图片的路径数组和大图的输出路径
+const imagePaths = [
+  'path/to/image1.jpg',
+  'path/to/image2.jpg',
+  // 添加更多的小图片路径
+];
+
+
 const imgArr = {}
 const NumImg = {}
-let textColor = [0, 0, 0, 255]
+let textColor = 0x000000ff
+let FONT
 
 
 /**
@@ -15,36 +51,36 @@ let textColor = [0, 0, 0, 255]
  */
 export async function setTheme(config: MineConfig) {
     // 十六进制颜色转RGBA
-    textColor = hexToRgba(config.colorForSerialNum)
+    textColor = hexToRgba("#ff00f0ff")
     const themePath = resolve(__dirname, "theme", config.theme)
     const imageTypes = ['closed', 'flag', 'type0', 'type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8'];  // 扫雷的皮肤文件名
     for (var type of imageTypes) {
-        imgArr[type] = await readImageAsArray(resolve(themePath, `${type}.png`))
+        imgArr[type] = await Jimp.read(resolve(themePath, `${type}.png`))
     }
     for (var i = 0; i < 10; i++) {
-        NumImg[i] = await readImageAsArray(resolve(__dirname, `text/text${i}.png`)) //扫雷方块的编号上的数字
+        NumImg[i] = await Jimp.read(resolve(__dirname, `text/text${i}.png`)) //扫雷方块的编号上的数字
     }
+    FONT = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK)
 }
 async function main() {
     textColor = hexToRgba("#fff000ff")
     const themePath = resolve(__dirname, "theme/", "wom")
     const imageTypes = ['closed', 'flag', 'type0', 'type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8'];
     for (var type of imageTypes) {
-        imgArr[type] = await readImageAsArray(resolve(themePath, `${type}.png`))
+        imgArr[type] = await Jimp.read(resolve(themePath, `${type}.png`))
     }
     for (var i = 0; i < 10; i++) {
-        NumImg[i] = await readImageAsArray(resolve(__dirname, `text/text${i}.png`))
+        NumImg[i] = await Jimp.read(resolve(__dirname, `text/text${i}.png`)) //扫雷方块的编号上的数字
     }
+    FONT = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK)
     const m = new Minefield(9, 9, 20)
     m.openCell("6")
     console.time("mytime")
-
     const img = await renderX(m)
-    fs.writeFileSync('test.png', Buffer.from(img))
     console.timeEnd("mytime")
-
+    // fs.writeFileSync('test.png', Buffer.from(img))
 }
-// main()
+main()
 
 /**
  * 在图片上添加数字
@@ -179,28 +215,32 @@ function concatX(arrayx: number[][][][]) {
  */
 export async function renderX(m: Minefield) {
     let x: number = m.width
-    const img: number[][][] = []
-    let tmp: number[][][][] = []
+    let y: number = m.height
+    const bigImage = new Jimp(x*94, y*94)
     for (var i = 0; i < m.cells; i++) {
+        let [px,py] = [(i%x)*94,Math.floor(i/y)*94]
         const ii = m[String(i)]
-        if (i % x == 0 && i != 0) {
-            img.push(...concatX(tmp))
-            tmp = []
-        }
         if (ii["isOpen"]) {
             // 打开
-            tmp.push(imgArr[`type${ii["mines"]}`])
+            bigImage.blit(imgArr[`type${ii["mines"]}`],px,py)
+            // tmp.push(imgArr[`type${ii["mines"]}`])
         }
         else if (ii["isFlagged"]) {
-            tmp.push(imgArr['flag'])
+            bigImage.blit(imgArr[`type${ii["flag"]}`],px,py)
+            // tmp.push(imgArr['flag'])
         }
         else {
-            tmp.push(await addText(i))
+            bigImage.blit(imgArr[`closed`],px,py)
+            bigImage.print(FONT, px+30, py+30, i<10?"0"+i:String(i),);
+            // tmp.push(await addText(i))
         }
     }
-    img.push(...concatX(tmp))
-    const res = writeArrayToImage(img, img[0].length, img.length)
-    return res
+    
+    // img.push(...concatX(tmp))
+    // const res = writeArrayToImage(img, img[0].length, img.length)
+    await bigImage.writeAsync("test/test.png");
+    // const res = await bigImage.getBufferAsync(Jimp.MIME_PNG);
+    // return res
 }
 
 
@@ -228,19 +268,13 @@ function deepCopyArray(arr: any[]) {
  */
 function hexToRgba(hex: string) {
     // 去除可能包含的 # 符号
-    hex = hex.replace(/^#/, '');
-
-    // 将十六进制的颜色值分解成红色、绿色、蓝色和透明度部分
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    const a = parseInt(hex.substring(6, 8), 16);
-    // 返回 RGBA 颜色
-    const rgba = [r, g, b, a]
-    for (var i of rgba) {
-        if (i > 255) {
-            return [0, 0, 0, 255]
-        }
+    hex = hex.replace("#","")
+    let rgba
+    try{
+        rgba = Jimp.cssColorToHex(hex)
+        console.log(rgba)
+    }catch(e){
+        rgba = 0x000000FF
     }
     return rgba
 }
