@@ -1,5 +1,4 @@
 import { Context, Keys, Logger, Session, h } from 'koishi'
-import { } from '@koishijs/plugin-adapter-onebot'
 import Minefield from "./minesweeper";
 import { MinesweeperRank } from '.';
 export const name = 'minesweeper-ending'
