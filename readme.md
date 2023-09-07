@@ -52,14 +52,14 @@ koishi-plugin-minesweeper-ending 是一个基于 Koishi 框架的插件，实现
 - 主题配置
   - 皮肤 theme: string
     - 插件自带了两种皮肤chcolate皮肤 和 wom皮肤
-    - 玩家可以自定义皮肤 在koishi根目录的/data/minesweeper/theme 目录下添加自定义的皮肤，图片要求： 94*94，目录结构保持一致即可
+    - 玩家可以自定义皮肤 在模块目录 node_modules/koishi-plugin-minesweeper-ending/theme 目录下添加自定义的皮肤，图片要求： 94*94，目录结构保持一致即可
   - 字体颜色 colorForSerialNum: grey
   - 字体大小 FontSizeForSerialNum: 40，(单位px)
   - 背景颜色 BackGroundColor: white
 
 ## 🎮 使用
 
-- 请确保你的 koishi 启用了浏览器服务
+开箱即用
 
 ### 📝 命令
 

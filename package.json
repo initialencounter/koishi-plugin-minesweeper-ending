@@ -36,7 +36,6 @@
     "koishi": "^4.13.0"
   },
   "koishi": {
-    "browser": true,
     "description": {
       "en": "Minesweeper, no guesswork, high-performance native image processing",
       "zh": "扫雷残局，无猜，高性能原生图像处理"
