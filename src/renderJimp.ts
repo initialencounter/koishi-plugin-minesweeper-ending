@@ -63,7 +63,7 @@ export async function renderX(m: Minefield) {
             bigImage.blit(imgArr[`type${ii["mines"]}`],px,py)
         }
         else if (ii["isFlagged"]) {
-            bigImage.blit(imgArr[`type${ii["flag"]}`],px,py)
+            bigImage.blit(imgArr["flag"],px,py)
         }
         else {
             bigImage.blit(imgArr[`closed`],px,py)
