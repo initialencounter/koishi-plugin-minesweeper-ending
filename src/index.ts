@@ -1,6 +1,6 @@
 import { Context, Schema, Logger, Dict, Session, h, Keys } from 'koishi';
 import Minefield from "./minesweeper";
-import { renderX, setTheme } from './render'
+import { renderX, setTheme } from './renderJimp'
 export const name = 'minesweeper-ending';
 
 import { MineConfig, mineUsage } from "./config"

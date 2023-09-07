@@ -16,7 +16,10 @@ export const MineConfig = Schema.intersect([
     }),
     Schema.object({
         theme: Schema.string().default('chocolate').description("扫雷的皮肤,目前自带了 wom 和 chocolate,可在模块目录中自定义皮肤"),
-        colorForSerialNum: Schema.string().default('#000000ff').description("方块序列号的颜色,格式：十六进制字符串")
+        colorForNum: Schema.union([
+            Schema.const("white").description("白色"),
+            Schema.const("black").description("黑色")
+        ]).default('white').description("方块序列号的颜色")
     }).description("主题设置"),
     Schema.object({
         width: Schema.number().default(5).description("宽度"),
@@ -42,7 +45,7 @@ export interface MineConfig {
     EntryFee: number
 
     theme: string
-    colorForSerialNum: string
+    colorForNum: string
 
     width: number
     height: number
